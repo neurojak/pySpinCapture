@@ -12,5 +12,11 @@ cameraCapture2cams.py extends functionality to 2 synchronized cameras, and uses 
 running at the fastest possible frame rate. Note that this version requires a trigger to be sent to the cameras on
 Line 0's, which are physically connected. 
 
-Both versions require a pull-up resistor to be installed between camera Line 1 and 3.3V signals to drive the exposure 
-signal (as recommended in FLIR documentation; ~1kOhm seems to work well).
+cameraCapture2camsGpu.py is similar to cameraCapture2cams.py, but uses FFMPEG hardware encoding with NVIDIA's h26_nvenc
+encoder, which is much faster and allows higher frame rates with minimal CPU and memory usage. This requires a compatible 
+GPU as described at https://developer.nvidia.com/ffmpeg, https://trac.ffmpeg.org/wiki/HWAccelIntro.
+
+cameraFreeRunNoCapture.py just outputs 2 camera streams to the monitor without saving.
+
+All versions require a pull-up resistor to be installed between camera Line 1 and 3.3V signals to drive the exposure 
+signal properly (as recommended in FLIR documentation; ~1kOhm seems to work well).

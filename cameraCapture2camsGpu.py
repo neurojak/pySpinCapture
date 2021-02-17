@@ -21,21 +21,20 @@
 #  To setup, you must download an FFMPEG executable and set an environment 
 #  variable path to it (as well as setFFmpegPath function below). Other nonstandard
 #  dependencies are the FLIR Spinnaker camera driver and PySpin package (see 
-#  Spinnaker downloads), and the skvideo package. 
+#  Spinnaker downloads), and the skvideo package. In this version, hardware encoding is used
+#  which requires a compatible NVIDIA GPU with the drives installed before FFMPEG is compiled.
+#  See: https://developer.nvidia.com/ffmpeg, https://trac.ffmpeg.org/wiki/HWAccelIntro
 #  
 #  NOTE: currently there is no check to see if readout can keep up with triggering
 #  other that a timeout warning. It is up to the user to determine if the correct number
 #  of frames are captured. Also, the "ffmpegThreads" parameter can throttle CPU usage
 #  by FFMPEG to allow other data acquistion task priority. For example, with an Intel Xeon
-#  W-2145 processor and 4 threads, CPU usage is limited to ~50-60% @ 500Hz, 320x240px,
-#  and compressed writing is close to real-time.
+#  W-2145 processor and NVIDA Quadro P4000, CPU usage is limited to ~25% and
+#  GPU use is ~30% @ 400Hz, 2 cameras at 496x496px each, and compressed writing keeps up with 
+#  the frame rate (i.e. memory usage does not increase during capture).
 #
 # TO DO:
 # (1) report potential # missed frames (maybe use counter to count Line 1 edges and write to video file)
-# (2) try using ImageEvent instead of blocking GetNextImage(timeout) call
-# (3) explicitly setup camera onboard buffer
-# (4) use multiprocess or other package to implement better parallel processing
-# (5) try FFMPEG GPU acceleration: https://developer.nvidia.com/ffmpeg
 # =============================================================================
 
 import PySpin, time, os, threading, queue
@@ -52,16 +51,16 @@ SAVE_FOLDER_ROOT = 'C:/video'
 FILENAME_ROOT = 'mj_' # optional identifier
 EXPOSURE_TIME = 500 #in microseconds
 WAIT_TIME = 0.0001 #in seconds - this limits polling time and should be less than the frame rate period 
-GAIN_VALUE = 0 #in dB, 0-40;
+GAIN_VALUE = 10 #in dB, 0-40;
 GAMMA_VALUE = 0.4 #0.25-1
-IMAGE_HEIGHT = 400  #540 pixels default; this should be divisible by 16 for H264 compressed encoding
-IMAGE_WIDTH = 400 #720 pixels default; this should be divisible by 16 for H264 compressed encoding
-HEIGHT_OFFSET = 72 #round((540-IMAGE_HEIGHT)/2) # Y, to keep in middle of sensor; must be divisible by 4
-WIDTH_OFFSET = 160# round((720-IMAGE_WIDTH)/2) # X, to keep in middle of sensor; must be divisible by 4
-FRAMES_PER_SECOND = 250 #this is determined by triggers sent from behavior controller
-FRAMES_TO_RECORD = 600*FRAMES_PER_SECOND #frame rate * num seconds to record; this should match # expected exposure triggers from DAQ counter output
+IMAGE_HEIGHT = 512  #540 pixels default; this should be divisible by 16 for H264 compressed encoding
+IMAGE_WIDTH = 512 #720 pixels default; this should be divisible by 16 for H264 compressed encoding
+HEIGHT_OFFSET = 16 #round((540-IMAGE_HEIGHT)/2) # Y, to keep in middle of sensor; must be divisible by 4
+WIDTH_OFFSET = 104# round((720-IMAGE_WIDTH)/2) # X, to keep in middle of sensor; must be divisible by 4
+FRAMES_PER_SECOND = 400 #this is determined by triggers sent from behavior controller
+FRAMES_TO_RECORD = 400*FRAMES_PER_SECOND #frame rate * num seconds to record; this should match # expected exposure triggers from DAQ counter output
 CAM_TIMEOUT = 1000 #in ms; time to wait for another image before aborting
-#FRAME_RATE_OUT = 250
+#FRAME_RATE_OUT = FRAMES_PER_SECOND #can alter ouput frame rate if necessary, but note that H264 limits this for playback, and this slows down video FFMPEG encoding dramatically
 
 # generate output video directory and filename and make sure not overwriting
 now = datetime.now()
@@ -88,12 +87,13 @@ def initCam(cam): #function to initialize camera parameters for synchronized cap
     # load default configuration
     cam.UserSetSelector.SetValue(PySpin.UserSetSelector_Default)
     cam.UserSetLoad()
-    # set acquisition. Continues acquisition. Auto exposure off. Set frame rate using exposure time. 
+    # set acquisition. Continuous acquisition. Auto exposure off. Set frame rate using exposure time. 
     cam.AcquisitionMode.SetValue(PySpin.AcquisitionMode_Continuous)
     cam.ExposureAuto.SetValue(PySpin.ExposureAuto_Off)
     cam.ExposureMode.SetValue(PySpin.ExposureMode_Timed) #Timed or TriggerWidth (must comment out trigger parameters other that Line)
     cam.ExposureTime.SetValue(EXPOSURE_TIME)
     cam.AcquisitionFrameRateEnable.SetValue(False)
+    #cam.AcquisitionFrameRate.SetValue(FRAMES_PER_SECOND)
     # set analog. Set Gain + Gamma. 
     cam.GainAuto.SetValue(PySpin.GainAuto_Off)
     cam.Gain.SetValue(GAIN_VALUE)
@@ -161,13 +161,9 @@ cam2 = cam_list[1]
 initCam(cam1) 
 initCam(cam2) 
  
-# setup output video file parameters (can try H265 in future for better compression):  
-# for some reason FFMPEG takes exponentially longer to write at nonstandard frame rates, so just use default 25fps and change elsewhere if needed
-crfOut = 21 #controls tradeoff between quality and storage, see https://trac.ffmpeg.org/wiki/Encode/H.264 
-ffmpegThreads = 4 #this controls tradeoff between CPU usage and memory usage; video writes can take a long time if this value is low
-#crfOut = 18 #this should look nearly lossless
-#writer = skvideo.io.FFmpegWriter(movieName, outputdict={'-r': str(FRAME_RATE_OUT), '-vcodec': 'libx264', '-crf': str(crfOut)}) # with frame rate
-writer = skvideo.io.FFmpegWriter(movieName, outputdict={'-vcodec': 'libx264', '-crf': str(crfOut), '-threads': str(ffmpegThreads)})
+# setup output video file parameters (first make sure latencies are OK with conservative parameters, then try to optimize):  
+# for now just use default h264_nvenc options
+writer = skvideo.io.FFmpegWriter(movieName, outputdict={'-vcodec': 'h264_nvenc'}) # encoder is h264_nvenc or libx264
 
 #setup tkinter GUI (non-blocking, i.e. without mainloop) to output images to screen quickly
 window = tk.Tk()

@@ -22,3 +22,6 @@ cameraFreeRunNoCapture.py just outputs 2 camera streams to the monitor without s
 
 All versions require a pull-up resistor to be installed between camera Line 1 and 3.3V signals to drive the exposure 
 signal properly (as recommended in FLIR documentation; ~1-10 kOhm seems to work well).
+
+INSTALLATION:
+Most of the dependecies in the import statments are included in a standard Anaconda installation (i.e. PIL, Numpy, Tkinter) and with your NVIDIA graphics card (i.e CUDA) for the GPU versions. PySpin and the Spinnaker API must be downloaded from the FLIR website (https://www.flir.com/products/spinnaker-sdk/); choose the appropriate version of Spinnaker and install first, then install the "Latest Python Spinnaker" version that is compatible with your version of Python (I've tested with Python 3.5 & 3.8) using the instructions in the ReadMe file. An FFMPEG executable needs to be downlaoded (https://ffmpeg.org/download.html) and placed in a folder that you can point to in the import statements, such as within the site-packages folder of your Python installation. Finally, scikit-video (http://www.scikit-video.org/stable/) can be added to your Python installation using pip.

@@ -2,6 +2,7 @@ import PySpin, time, os, threading, queue
 from datetime import datetime
 import tkinter as tk
 from PIL import Image, ImageTk
+from PyQt5.QtGui import QImage,QPixmap
 import numpy as np
 import skvideo
 #skvideo.setFFmpegPath('C:/Anaconda3/Lib/site-packages/ffmpeg') #set path to ffmpeg installation before importing io
@@ -158,7 +159,7 @@ def camCapture(camQueue,frameTimeQueue, cam, k,max_frames = 100000, cam_timeout 
         image.Release() #release from camera buffer
         k = k + 1
 
-def MainLoop(cam,parameters_dict, commQueue):
+def MainLoop(cam,parameters_dict, commQueue,output_handles= None):
     """
     Main camera loop that initializes a single camera, starts acquisition, displays images and write images to disk.
 
@@ -192,18 +193,19 @@ def MainLoop(cam,parameters_dict, commQueue):
         #writer = skvideo.io.FFmpegWriter(movieName, outputdict={'-r': str(FRAME_RATE_OUT), '-vcodec': 'libx264', '-crf': str(crfOut)}) # with frame rate
         writer = skvideo.io.FFmpegWriter(movieName, outputdict={'-vcodec': 'libx264', '-crf': str(crfOut), '-threads': str(ffmpegThreads)})
     
-    #setup tkinter GUI (non-blocking, i.e. without mainloop) to output images to screen quickly
-    window = tk.Tk()
-    window.title("{} camera - {} acquisition".format(parameters_dict['CAMERA_NAME'],parameters_dict['RECORDING_MODE']))
-    geomStrWidth = str(parameters_dict['IMAGE_WIDTH'] + 25)
-    geomStrHeight = str(parameters_dict['IMAGE_HEIGHT']+ 35)
-    window.geometry(geomStrWidth + 'x' + geomStrHeight) # 2x width+25 x height+35; large enough for frames from 2 cameras + text
-    #textlbl = tk.Label(window, text="elapsed time: ")
-    textlbl = tk.Label(window, text="waiting for trigger...")
-    textlbl.grid(column=0, row=0)
-    imglabel = tk.Label(window) # make Label widget to hold image
-    imglabel.place(x=10, y=20) #pixels from top-left
-    window.update() #update TCL tasks to make window appear
+    if output_handles ==None:
+        #setup tkinter GUI (non-blocking, i.e. without mainloop) to output images to screen quickly
+        window = tk.Tk()
+        window.title("{} camera - {} acquisition".format(parameters_dict['CAMERA_NAME'],parameters_dict['RECORDING_MODE']))
+        geomStrWidth = str(parameters_dict['IMAGE_WIDTH'] + 25)
+        geomStrHeight = str(parameters_dict['IMAGE_HEIGHT']+ 35)
+        window.geometry(geomStrWidth + 'x' + geomStrHeight) # 2x width+25 x height+35; large enough for frames from 2 cameras + text
+        #textlbl = tk.Label(window, text="elapsed time: ")
+        textlbl = tk.Label(window, text="waiting for trigger...")
+        textlbl.grid(column=0, row=0)
+        imglabel = tk.Label(window) # make Label widget to hold image
+        imglabel.place(x=10, y=20) #pixels from top-left
+        window.update() #update TCL tasks to make window appear
     
     try:
         print('Press Ctrl-C to exit early and save video')
@@ -250,11 +252,18 @@ def MainLoop(cam,parameters_dict, commQueue):
                 framerate_t_last = frameTime
                 
             if t_now - tLastFrame >.03: #update screen every 30 ms
-                textlbl.configure(text="frame #: {} @ {} HZ".format(i+1,framerate) )
-                I = ImageTk.PhotoImage(Image.fromarray(dequeuedAcq))
-                imglabel.configure(image=I)
-                imglabel.image = I #keep reference to image
-                window.update() #update on screen (this must be called from main thread)
+                if output_handles == None:
+                    textlbl.configure(text="frame #: {} @ {} HZ".format(i+1,framerate) )
+                    I = ImageTk.PhotoImage(Image.fromarray(dequeuedAcq))
+                    imglabel.configure(image=I)
+                    imglabel.image = I #keep reference to image
+                    window.update() #update on screen (this must be called from main thread)
+                else:
+                    dequeuedAcq_qt = np.require(dequeuedAcq, np.uint8, 'C')
+                    im = QImage(dequeuedAcq_qt,parameters_dict['IMAGE_WIDTH'],parameters_dict['IMAGE_HEIGHT'],QImage.Format_Grayscale8)
+                    px = QPixmap(im)
+                    output_handles['display'].setPixmap(px)
+                    output_handles['status_label'].setText("frame #: {} @ {} HZ".format(i+1,framerate))
                 tLastFrame = frameTime
             if i+1 == parameters_dict['MAX_FRAME_NUM'] or command == 'STOP':
                 print('Complete ' + str(i+1) + ' frames captured')
@@ -270,9 +279,9 @@ def MainLoop(cam,parameters_dict, commQueue):
             
     endCapture = True
     cam.EndAcquisition() 
-    
-    textlbl.configure(text='Capture complete, still writing to disk...') 
-    window.update()
+    if output_handles ==None:
+        textlbl.configure(text='Capture complete, still writing to disk...') 
+        window.update()
     print('Capture ends at: {:.2f}sec'.format(tEndAcq - tStart))
     #   print('calculated frame rate: {:.2f}FPS'.format(numImages/(t2 - t1)))
     if parameters_dict['SAVE_MOVIE']:
@@ -280,8 +289,8 @@ def MainLoop(cam,parameters_dict, commQueue):
         writer.close() #close to FFMPEG writer
         tEndWrite = time.time()
         print('File written at: {:.2f}sec'.format(tEndWrite - tStart))
-    
-    window.destroy() 
+    if output_handles ==None:
+        window.destroy() 
         #%
     # delete all pointers/variable/etc:
     

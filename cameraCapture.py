@@ -26,7 +26,6 @@ default_parameters  = {'EXPOSURE_TIME': 500, #in microseconds
                      'CAMERA_IDX':0,
                      'CAMERA_NAME':'side',
                      'SAVE_MOVIE':False,
-                     'SAVE_FOLDER_ROOT' : 'C:/video',
                      'SUBJECT_NAME' : 'test_subject', # optional identifier}
                      }
 
@@ -114,7 +113,7 @@ def saveImage(imageWriteQueue, writer):
             writer.writeFrame(dequeuedImage) #call to ffmpeg
             imageWriteQueue.task_done()
                       
-def camCapture(camQueue,frameTimeQueue, cam, k,max_frames = 100000, cam_timeout = .5): 
+def camCapture(camQueue,frameTimeQueue,commQueue, cam, k,max_frames = 100000, cam_timeout = .5): 
     """
     Function to capture images and timestamps, convert to numpy, send to queue, and release from buffer in separate process
 
@@ -138,11 +137,13 @@ def camCapture(camQueue,frameTimeQueue, cam, k,max_frames = 100000, cam_timeout 
     None.
 
     """
-    global endCapture
+    command == None
     while True:
+        if not commQueue.empty():
+            command = commQueue.get()
         if k == 0: #wait infinitely for trigger for first image
             image = cam.GetNextImage() #get pointer to next image in camera buffer; blocks until image arrives via USB, within infinite timeout for first frame while waiting for DAQ to start sending triggers    
-        elif k == max_frames or endCapture :
+        elif k == max_frames or command == 'STOP' :
             print('cam done ')
             break #stop loop and function when expected # frames found
         else:
@@ -177,8 +178,6 @@ def MainLoop(cam,parameters_dict, commQueue,output_handles= None):
     None.
 
     """
-    global endCapture # this variable helps stop the reading thread
-    endCapture = False
     # INITIALIZE CAMERAS & COMPRESSION ##########################################################################################
     
     initCam(cam,parameters_dict)
@@ -213,14 +212,16 @@ def MainLoop(cam,parameters_dict, commQueue,output_handles= None):
         
         camQueue = queue.Queue()  #queue to pass images from separate cam1 acquisition thread
         frameTimeQueue = queue.Queue()
+        commQueue_ = queue.Queue()
         # setup separate threads to accelerate image acquisition and saving, and start immediately:
+        imageWriteQueue = queue.Queue() #queue to pass images captures to separate compress and save thread
         if parameters_dict['SAVE_MOVIE']:
-            imageWriteQueue = queue.Queue() #queue to pass images captures to separate compress and save thread
+            
             saveThread = threading.Thread(target=saveImage, args=(imageWriteQueue, writer,))
             saveThread.start()  
         
         
-        camThread = threading.Thread(target=camCapture, args=(camQueue,frameTimeQueue, cam, i, parameters_dict['MAX_FRAME_NUM'],parameters_dict['CAM_TIMEOUT'],))
+        camThread = threading.Thread(target=camCapture, args=(camQueue,frameTimeQueue, commQueue_, cam, i, parameters_dict['MAX_FRAME_NUM'],parameters_dict['CAM_TIMEOUT'],))
         cam.BeginAcquisition()
         camThread.start()
     #%
@@ -263,7 +264,7 @@ def MainLoop(cam,parameters_dict, commQueue,output_handles= None):
                     im = QImage(dequeuedAcq_qt,parameters_dict['IMAGE_WIDTH'],parameters_dict['IMAGE_HEIGHT'],QImage.Format_Grayscale8)
                     px = QPixmap(im)
                     output_handles['display'].setPixmap(px)
-                    output_handles['status_label'].setText("frame #: {} @ {} HZ".format(i+1,framerate))
+                    output_handles['status_label'].setText("frame #: {} @ {} HZ - queue: {}".format(str(i+1).zfill(6),str(framerate).zfill(5),imageWriteQueue.qsize()))
                 tLastFrame = frameTime
             if i+1 == parameters_dict['MAX_FRAME_NUM'] or command == 'STOP':
                 print('Complete ' + str(i+1) + ' frames captured')
@@ -277,7 +278,8 @@ def MainLoop(cam,parameters_dict, commQueue,output_handles= None):
         tEndAcq = frameTime
         pass        
             
-    endCapture = True
+    commQueue_.put('STOP')#stop acquisition queue
+    
     cam.EndAcquisition() 
     if output_handles ==None:
         textlbl.configure(text='Capture complete, still writing to disk...') 

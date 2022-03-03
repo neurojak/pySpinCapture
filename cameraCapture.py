@@ -16,10 +16,10 @@ default_parameters  = {'EXPOSURE_TIME': 500, #in microseconds
                      'WAIT_TIME' : 0.0001, #in seconds - this limits polling time and should be less than the frame rate period 
                      'GAIN_VALUE' : 5, #in dB, 0-40;
                      'GAMMA_VALUE' : 0.4, #0.25-1
-                     'IMAGE_HEIGHT' : 400,  #540 pixels default; this should be divisible by 16 for H264 compressed encoding
-                     'IMAGE_WIDTH' : 400, #720 pixels default; this should be divisible by 16 for H264 compressed encoding
-                     'HEIGHT_OFFSET' : 72, #round((540-IMAGE_HEIGHT)/2) # Y, to keep in middle of sensor; must be divisible by 4
-                     'WIDTH_OFFSET' : 160, # round((720-IMAGE_WIDTH)/2) # X, to keep in middle of sensor; must be divisible by 4
+                     'IMAGE_HEIGHT' : 1080,  #540 pixels default; this should be divisible by 16 for H264 compressed encoding
+                     'IMAGE_WIDTH' : 1440, #720 pixels default; this should be divisible by 16 for H264 compressed encoding
+                     'HEIGHT_OFFSET' : 0, #round((540-IMAGE_HEIGHT)/2) # Y, to keep in middle of sensor; must be divisible by 4
+                     'WIDTH_OFFSET' : 0, # round((720-IMAGE_WIDTH)/2) # X, to keep in middle of sensor; must be divisible by 4
                      'CAM_TIMEOUT' : 10000, #in ms; time to wait for another image before aborting
                      'MAX_FRAME_NUM':10000,
                      'RECORDING_MODE':'continuous', #continuous / triggered

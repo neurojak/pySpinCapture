@@ -1,4 +1,3 @@
-
 # =============================================================================
 # import sys
 # import os
@@ -118,8 +117,7 @@ class MainWindow(QDialog):
         
         parameters_camera = cameraCapture.default_parameters
         for camera_idx, cam in enumerate(self.cam_list):
-            camcommQueue = queue.Queue()
-            self.commQueue_list.append(camcommQueue )
+            self.commQueue_list.append(queue.Queue() )
             cam.Init()
             self.camera_parameters_list.append(parameters_camera)
             

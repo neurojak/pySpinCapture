@@ -4,14 +4,15 @@ a python wrapper to the FLIR PySpin API to capture synchronized video
 ## Installation step by step on Ubuntu 20.04
 Download and install Anaconda.
 ### Install Spinnaker SDK and API
-- Download Spinnaker SDK and python API from https://www.flir.com/products/spinnaker-sdk/, then follow instructions in readme files to install them, in short:
+- Download Spinnaker SDK and python API from https://flir.app.boxcn.net/v/SpinnakerSDK/folder/156995360267 - download version 2.5 because it works, 2.6 doesn't work for some reason in my hands
+- Follow instructions in readme files to install them, in short:
    - install dependencies with:```sudo apt-get install libavcodec58 libavformat58 libswscale5 libswresample3 libavutil56 libusb-1.0-0 libpcre2-16-0 libdouble-conversion3 libxcb-xinput0 libxcb-xinerama0```
    - unzip the Spinnaker SDK files, go to the directory and install it with: ```sudo sh install_spinnaker.sh```
    - follow steps, enable everything, add user to flirusers group, and the SDK is installed
    - Create a conda environment for the python API: ```conda create -n pySpinCapture python=3.8```
    - Activate the conda environment: ```conda activate pySpinCapture```
-   - Install dependencies ``pip install numpy matplotlib```
-   - unzip spinnaker API you downloaded earlier, go in directory and install API with ```pip install spinnaker_python-2.6.0.156-cp38-cp38-linux_x86_64.whl``` note that you are still in the pySpinCapture environment
+   - Install dependencies ```pip install numpy matplotlib```
+   - unzip spinnaker API you downloaded earlier, go in directory and install API with ```pip install spinnaker_python-2.5.0.156-cp38-cp38-linux_x86_64.whl``` note that you are still in the pySpinCapture environment
 
 ### Install dependencies for this package
 ```

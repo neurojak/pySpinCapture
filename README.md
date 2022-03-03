@@ -15,7 +15,7 @@ Download and install Anaconda.
 
 ### Install dependencies for this package
 ```
-pip install pyqt5
+pip install pyqt5 scikit-video 
 ```
 
 - 

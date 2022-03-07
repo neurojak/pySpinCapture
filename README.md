@@ -1,6 +1,14 @@
 # pySpinCapture
 A python wrapper and GUI for the FLIR PySpin API to capture synchronized video accross multiple cameras. Originally forked from Jason Keller's repo with the same name. (https://github.com/neurojak/pySpinCapture)
-
+### Features
+- Configs are saved in .json files and can be loaded within the GUI.
+- Displays frames at video rate for the user.
+- Multiple cameras (2 tested)
+- Online GPU accelerated compression and writing to disk.
+- Trial ends are recognized by a gap in frame triggers. Each trial goes in a separate file.
+- Broadcasts file names to an UDP server (which should be run separately), so pybpod can save the name of each video file.
+### Wishlist
+- save frame times and camera configuration for each movie
 ## Installation step by step on Ubuntu 20.04
 Download and install Anaconda.
 ### Install Spinnaker SDK and API

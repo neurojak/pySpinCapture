@@ -49,3 +49,10 @@ bpod_address = ('10.128.54.244',1001) # optional - IP address of bpod computer t
 ### Camera windows - camera # - ####
 - You can start/stop acquisition with the button on the top left of the window.
 - By checking the preview checkbox, you can disable triggering and recording, so it's easier to set the camera parameters or just look at the mouse.
+
+### day-to-day usage
+- Start the GUI.
+- (optional) Create a new configuration or modify an existing one.
+- Select the configuration you need from the drop-down menu.
+- Click start on all cameras.
+- Start the behavior.

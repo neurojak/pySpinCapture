@@ -22,6 +22,7 @@ pip install pyqt5 scikit-video
 It worked out of the box with a GeForce GTX 970.
 
 ### Set computer-specific parameters
+find the following lines in the pySpinCapture_GUI.py file and edit them:
 ```
 skvideo.setFFmpegPath('/usr/bin/') #set path to ffmpeg installation before importing io
 config_folder = '/home/labadmin/Data/pySpinCaptureConfig/' # folder where the config files will be saved

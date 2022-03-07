@@ -11,15 +11,15 @@ import cameraCapture
 import threading, queue
 from pathlib import Path
 import skvideo
-skvideo.setFFmpegPath('/usr/bin/') #set path to ffmpeg installation before importing io
 
+skvideo.setFFmpegPath('/usr/bin/') #set path to ffmpeg installation before importing io
 config_folder = '/home/labadmin/Data/pySpinCaptureConfig/'
 save_folder = '/home/labadmin/Data/Behavior_videos/'
 camera_names_in_order = ['bottom','side','body']
 bpod_address = ('10.128.54.244',1001)
 
 
-#%%
+#%
 
 class QTextEditLogger(logging.Handler):
     def __init__(self, parent):
@@ -31,7 +31,7 @@ class QTextEditLogger(logging.Handler):
         msg = self.format(record)
         self.widget.appendPlainText(msg)
         
-class Logger(QDialog): # standalone window for each camera
+class Logger(QDialog):# simple logger
     def __init__(self, parent=None,camera_idx = None):
         super(Logger, self).__init__(parent)  
         
@@ -99,6 +99,8 @@ class CameraDisplay(QDialog): # standalone window for each camera
         Function that reads the text on the start/stop push button, and starts 
         the cameraCapture.MainLoop() on a separate thread, or stops the thread
         depending on the text on the button.
+        Starting a camera creates a new directory where each trial will be saved
+        as a separate file.
         """
         if self.startbutton.text() == 'Start':
             dir_name = os.path.join(self.parent().save_folder,
@@ -159,6 +161,9 @@ class MainWindow(QDialog):
         self.logger.show()
         
     def initUI(self):
+        """
+        Generates user interface, loads subject information for the first time.
+        """
         self.setWindowTitle(self.title)
         self.setGeometry(self.left, self.top, self.width, self.height)
         
@@ -189,12 +194,20 @@ class MainWindow(QDialog):
         self.show()
     
     def add_new_subject(self):
+        """
+        Reads out text from the new subject edit box and adds it as a new 
+        subject. Uses the currently loaded configuration.
+        """
         new_subject = self.handles['new_subject'].text()
         self.camera_save_parameters(new_subject)
         self.load_subjects(new_subject)
         
     
     def load_subjects(self,new_subject = None):
+        """
+        Finds the config files in self.config_folder and creates an entry
+        in the GUI for each subject.
+        """
         subject_names = []
         for subject_ in os.listdir(self.config_folder):
             if subject_.endswith('.json'):
@@ -210,6 +223,11 @@ class MainWindow(QDialog):
         self.handles['subject_select'].currentIndexChanged.connect(lambda: self.load_camera_parameters())
     
     def load_camera_parameters(self):
+        """
+        This function loads camera parameters in the gui, also initializes
+        the parameters gui when run at the first time. The number of columns 
+        in the GUI can be set here.
+        """
         maxcol = 3 # number of columns
         subject_now = self.handles['subject_select'].currentText()
         if subject_now == '':#no subject in the system
@@ -265,6 +283,11 @@ class MainWindow(QDialog):
                     self.handles['camera_variables'][i][key].setText(str(camera_parameters[key]))
 
     def camera_save_parameters(self,new_subject_name = None):
+        """
+        This function checks if the variables of the parameters file line up 
+        with the variables entered in the GUI. E.G. if the user enters string
+        that should be int, it ignores that field.
+        """
         camera_parameters_list_new = []
         for cam,parameters_dict,handles_camera_variables in zip(self.cam_list,self.camera_parameters_list,self.handles['camera_variables']):
             cameraCapture.initCam(cam,parameters_dict,True)
@@ -311,84 +334,17 @@ class MainWindow(QDialog):
         with open(subject_var_file, 'w') as outfile:
             json.dump(camera_parameters_list_new, outfile, indent=4)
         self.camera_parameters_list = camera_parameters_list_new
+        self.load_camera_parameters()
 
-            
-# =============================================================================
-#         self.bpod_load_parameters()
-#         self.bpod_check_parameters()
-# =============================================================================
     def camera_check_parameters(self):
-       pass 
-    
-# =============================================================================
-#     #%%
-#     with open(os.path.join(config_folder,'{}.json'.format(subject_name)), 'w') as outfile:
-#         json.dump(lista, outfile, indent=4)
-#     #%%
-# =============================================================================
+        """
+        function that highlights a changed variable on the GUI to the user if 
+        it is not saved yet. Useful but not crucial to have.
 
-    
-# =============================================================================
-#     def bpod_check_parameters(self):
-#         project_now = self.handles['bpod_filter_project'].currentText()
-#         experiment_now = self.handles['bpod_filter_experiment'].currentText()
-#         setup_now = self.handles['bpod_filter_setup'].currentText()
-#         subject_now = self.handles['subject_select'].currentText()
-#         subject_var_file = os.path.join(self.pybpod_dir,project_now,'subjects',subject_now,'variables.json')
-#         setup_var_file = os.path.join(self.pybpod_dir,project_now,'experiments',experiment_now,'setups',setup_now,'variables.json')
-#         with open(subject_var_file) as json_file:
-#             variables_subject = json.load(json_file)
-#         with open(setup_var_file) as json_file:
-#             variables_setup = json.load(json_file)
-#             
-#         self.properties['bpod']['subject'] = variables_subject
-#         self.properties['bpod']['setup'] = variables_setup
-#         for dicttext in ['subject','setup']:
-#             for key in self.handles['bpod_variables_'+dicttext].keys(): 
-#                 valuenow = None
-#                 
-#                 # Auto formatting
-#                 if key in self.properties['bpod'][dicttext].keys():  # If json file has the parameter in the GUI (backward compatibility). HH20200730
-#                     if type(self.properties['bpod'][dicttext][key]) == bool:
-#                         if 'true' in self.handles['bpod_variables_'+dicttext][key].text().lower() or '1' in self.handles['bpod_variables_'+dicttext][key].text():
-#                             valuenow = True
-#                         else:
-#                             valuenow = False
-#                     elif type(self.properties['bpod'][dicttext][key]) == float:
-#                         try:
-#                             valuenow = float(self.handles['bpod_variables_'+dicttext][key].text())
-#                         except:
-#                             print('not proper value')
-#                             valuenow = None
-#                     elif type(self.properties['bpod'][dicttext][key]) == int:                   
-#                         try:
-#                             valuenow = int(round(float(self.handles['bpod_variables_'+dicttext][key].text())))
-#                         except:
-#                             print('not proper value')
-#                             valuenow = None
-#                     elif type(self.properties['bpod'][dicttext][key]) == str:   
-#                         if self.handles['bpod_variables_'+dicttext][key].text().lower() in ['left','right','any','none'] and key == 'WaitForLick':
-#                             valuenow = self.handles['bpod_variables_'+dicttext][key].text().lower()
-#                         elif self.handles['bpod_variables_'+dicttext][key].text().lower() in ['left','right'] and key == 'RewardLickPortOnNoLick':
-#                              valuenow = self.handles['bpod_variables_'+dicttext][key].text().lower()
-#                         else:
-#                              valuenow = None
-#                             
-#                     # Turn the newly changed parameters to red            
-#                     if valuenow == self.properties['bpod'][dicttext][key]:
-#                         self.handles['bpod_variables_'+dicttext][key].setStyleSheet('QLineEdit {color: black;}')
-#                     else:
-#                         self.handles['bpod_variables_'+dicttext][key].setStyleSheet('QLineEdit {color: red;}')
-#                 else:   # If json file has missing parameters (backward compatibility). HH20200730
-#                     # self.handles['variables_subject'][key].setText("NA")
-#                     self.handles['bpod_variables_subject'][key].setStyleSheet('QLineEdit {background: grey;}')
-#                     
-#                     
-#         qApp.processEvents()
-# =============================================================================
-        
-    
-
+        """
+        #TODO - to be implemented
+        pass 
+ 
 
 
 if __name__ == '__main__':

@@ -5,7 +5,6 @@ from PIL import Image, ImageTk
 from PyQt5.QtGui import QImage,QPixmap
 import numpy as np
 import skvideo
-#skvideo.setFFmpegPath('/usr/bin/') #set path to ffmpeg installation before importing io
 import skvideo.io
 import socket
 
@@ -181,7 +180,10 @@ def camCapture(camQueue,frameTimeQueue,commQueue_, cam, k,max_frames = 100000, c
 
 def MainLoop(cam,parameters_dict, commQueue, output_handles= None, directoryName=''):
     """
-    Main camera loop that initializes a single camera, starts acquisition, displays images and write images to disk.
+    Main camera loop that initializes a single camera, starts acquisition, 
+    displays images and write images to disk.
+    The MainLoop is two embedded loops, one for trials and an inner loop
+    for frames.
 
     Parameters
     ----------
@@ -197,8 +199,7 @@ def MainLoop(cam,parameters_dict, commQueue, output_handles= None, directoryName
     None.
 
     """
-    # INITIALIZE CAMERAS & COMPRESSION ##########################################################################################
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # UDP
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # initialize UDP connection
     initCam(cam,parameters_dict)
     end_acquisition = False 
     trial_num = -1
@@ -237,7 +238,7 @@ def MainLoop(cam,parameters_dict, commQueue, output_handles= None, directoryName
             else:
                 output_handles['filename_label'].setText('NOT RECORDING')
         
-        i = 0
+       
         
         camQueue = queue.Queue()  #queue to pass images from separate cam1 acquisition thread
         frameTimeQueue = queue.Queue()
@@ -249,24 +250,23 @@ def MainLoop(cam,parameters_dict, commQueue, output_handles= None, directoryName
             saveThread = threading.Thread(target=saveImage, args=(imageWriteQueue, writer,))
             saveThread.start()  
         
-        
+        frame_i = 0
         camThread = threading.Thread(target=camCapture, args=(camQueue,
                                                               frameTimeQueue, 
                                                               commQueue_, 
                                                               cam, 
-                                                              i, 
+                                                              frame_i, 
                                                               parameters_dict['MAX_FRAME_NUM'],
                                                               parameters_dict['CAM_TIMEOUT'],))
         cam.BeginAcquisition()
         camThread.start()
-    #%
         command = None
         framerate_i_last = 0
         framerate_t_last = 0
         framerate = 0
         t_now = 0
         tStart = t_now
-        for i in range(parameters_dict['MAX_FRAME_NUM']): # main acquisition loop - iterate over frames
+        for frame_i in range(parameters_dict['MAX_FRAME_NUM']): # main acquisition loop - iterate over frames
             while camQueue.empty() and commQueue.empty() and commQueue_.empty(): #wait until ready in a loop
                 time.sleep(parameters_dict['WAIT_TIME'])
             if not commQueue.empty(): # commands from main window - this can stop the outer loop
@@ -276,32 +276,31 @@ def MainLoop(cam,parameters_dict, commQueue, output_handles= None, directoryName
             if not commQueue_.empty(): # commands from camera thread
                 command = commQueue_.get()
                 print('STOPPED')
-            if i == parameters_dict['MAX_FRAME_NUM'] or command == 'STOP':
-                print('Complete ' + str(i+1) + ' frames captured')
-                tEndAcq = t_now
+            if frame_i == parameters_dict['MAX_FRAME_NUM'] or command == 'STOP':
+                print('Complete ' + str(frame_i+1) + ' frames captured')
                 break
             
             dequeuedAcq = camQueue.get() # get images formated as numpy from separate process queues as soon as they are both ready
             frameTime = frameTimeQueue.get() 
             
             t_now = frameTime
-            if i == 0:
+            if frame_i == 0:
                 tStart = t_now
                 tLastFrame = tStart
                 print('Capture begins')
-            elif i == 1 and parameters_dict['SAVE_MOVIE'] and not output_handles ==  None:
+            elif frame_i == 1 and parameters_dict['SAVE_MOVIE'] and not output_handles ==  None:
                 sock.sendto(bytes(movieName, "utf-8"), output_handles['bpod_address']) # send bpod the filename before finalizing on disk
             
             if parameters_dict['SAVE_MOVIE']:
                 imageWriteQueue.put(dequeuedAcq) #put next combined image in saving queue
-            if (i+1)%100 == 0:
-                framerate = round((i-framerate_i_last)/(t_now-framerate_t_last),2)
-                framerate_i_last = i
+            if (frame_i+1)%100 == 0: # calculate framerate every 100 frames
+                framerate = round((frame_i-framerate_i_last)/(t_now-framerate_t_last),2)
+                framerate_i_last = frame_i
                 framerate_t_last = frameTime
                 
             if t_now - tLastFrame >.03: #update screen every 30 ms
                 if output_handles == None:
-                    textlbl.configure(text="frame #: {} @ {} HZ".format(i+1,framerate) )
+                    textlbl.configure(text="frame #: {} @ {} HZ".format(frame_i+1,framerate) )
                     I = ImageTk.PhotoImage(Image.fromarray(dequeuedAcq))
                     imglabel.configure(image=I)
                     imglabel.image = I #keep reference to image
@@ -312,7 +311,7 @@ def MainLoop(cam,parameters_dict, commQueue, output_handles= None, directoryName
                     im = QImage(dequeuedAcq_qt,downsampled_image.shape[1],downsampled_image.shape[0],QImage.Format_Grayscale8)
                     px = QPixmap(im)
                     output_handles['display'].setPixmap(px)
-                    output_handles['status_label'].setText("frame #: {} @ {} HZ - queue: {}".format(str(i+1).zfill(6),str(framerate).zfill(5),imageWriteQueue.qsize()))
+                    output_handles['status_label'].setText("frame #: {} @ {} HZ - queue: {}".format(str(frame_i+1).zfill(6),str(framerate).zfill(5),imageWriteQueue.qsize()))
                 tLastFrame = frameTime
                 
                           
@@ -324,7 +323,7 @@ def MainLoop(cam,parameters_dict, commQueue, output_handles= None, directoryName
             window.update()
         print('Capture ended')
         #   print('calculated frame rate: {:.2f}FPS'.format(numImages/(t2 - t1)))
-        if parameters_dict['SAVE_MOVIE'] and i>0: # save files only if there are frames to write
+        if parameters_dict['SAVE_MOVIE'] and frame_i>0: # save files only if there are frames to write
             
             imageWriteQueue.join() #wait until compression and saving queue is done writing to disk
             writer.close() #close to FFMPEG writer

@@ -19,8 +19,16 @@ Download and install Anaconda.
 pip install pyqt5 scikit-video 
 ```
 ### Install video card driver
-It worked out of the box with a 
+It worked out of the box with a GeForce GTX 970.
 
+### Set computer-specific parameters
+```
+skvideo.setFFmpegPath('/usr/bin/') #set path to ffmpeg installation before importing io
+config_folder = '/home/labadmin/Data/pySpinCaptureConfig/' # folder where the config files will be saved
+save_folder = '/home/labadmin/Data/Behavior_videos/' # folder where the movies will be saved
+camera_names_in_order = ['bottom','side','body'] # user-defined camera names 
+bpod_address = ('10.128.54.244',1001) # optional - IP address of bpod computer that runs the UDP server to receive the video names
+```
 ## Usage
 ![image](https://user-images.githubusercontent.com/6236396/157129502-b13277c7-5e2d-4819-8aee-ba1f5b26e76c.png)
 

@@ -18,9 +18,11 @@ Download and install Anaconda.
 ```
 pip install pyqt5 scikit-video 
 ```
+### Install video card driver
+It worked out of the box with a 
 
-- 
-
+## Usage
+![image](https://user-images.githubusercontent.com/6236396/157129502-b13277c7-5e2d-4819-8aee-ba1f5b26e76c.png)
 
 cameraCapture.py is a minimal program to configure a FLIR BlackFly S monochrome camera to stream compressed video data
 to disk and output it to the screen in real-time. It is based on the FLIR Spinnaker PySpin API and its examples, 

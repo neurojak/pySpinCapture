@@ -9,6 +9,7 @@ A python wrapper and GUI for the FLIR PySpin API to capture synchronized video a
 - Broadcasts file names to an UDP server (which should be run separately), so pybpod can save the name of each video file.
 ### Wishlist
 - save frame times and camera configuration for each movie
+- step-by-step windows installation guide
 ## Installation step by step on Ubuntu 20.04
 Download and install Anaconda.
 ### Install Spinnaker SDK and API

@@ -1,5 +1,5 @@
 # pySpinCapture
-a python wrapper to the FLIR PySpin API to capture synchronized video
+A python wrapper and GUI for the FLIR PySpin API to capture synchronized video accross multiple cameras. Originally forked from Jason Keller's repo with the same name. (https://github.com/neurojak/pySpinCapture)
 
 ## Installation step by step on Ubuntu 20.04
 Download and install Anaconda.

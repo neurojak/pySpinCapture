@@ -268,6 +268,7 @@ def MainLoop(cam,parameters_dict, commQueue, output_handles= None, directoryName
         framerate = 0
         t_now = 0
         tStart = t_now
+        tStart_pc = t_now
         frame_times = []
         for frame_i in range(parameters_dict['MAX_FRAME_NUM']): # main acquisition loop - iterate over frames
             while camQueue.empty() and commQueue.empty() and commQueue_.empty(): #wait until ready in a loop
@@ -289,6 +290,7 @@ def MainLoop(cam,parameters_dict, commQueue, output_handles= None, directoryName
             t_now = frameTime
             if frame_i == 0:
                 tStart = t_now
+                tStart_pc = datetime.now()
                 tLastFrame = tStart
                 print('Capture begins')
             elif frame_i == 1 and parameters_dict['SAVE_MOVIE'] and not output_handles ==  None:
@@ -333,7 +335,8 @@ def MainLoop(cam,parameters_dict, commQueue, output_handles= None, directoryName
             writer.close() #close to FFMPEG writer
             print('File written')
             frametime_json_file = movieName[:movieName.find('.')]+'.json'   
-            frame_times_dict = {'movie_start_time':tStart,
+            frame_times_dict = {'pc_movie_start_time':str(tStart_pc),
+                                'camera_movie_start_time':tStart,
                                 'frame_times':frame_times}
             with open(frametime_json_file, 'w') as outfile:
                 json.dump(frame_times_dict , outfile, indent=4)

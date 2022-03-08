@@ -32,7 +32,12 @@ pip install pyqt5 scikit-video
 FFMPEG hardware encoding with NVIDIA's h264_nvenc encoder, which is much faster and allows higher frame rates with minimal CPU/GPU and memory usage. This requires a compatible GPU as described at https://developer.nvidia.com/ffmpeg, https://trac.ffmpeg.org/wiki/HWAccelIntro.</br>
 It worked out of the box with a GeForce GTX 970.
 
-### Set computer-specific parameters
+## Installation step by step on Windows 10
+### Install Spinnaker SDK and API
+### Install dependencies for this package
+### Install video card driver
+
+## Set computer-specific parameters
 find the following lines in the pySpinCapture_GUI.py file and edit them:
 ```
 skvideo.setFFmpegPath('/usr/bin/') #set path to ffmpeg installation before importing io

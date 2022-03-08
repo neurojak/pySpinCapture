@@ -63,3 +63,63 @@ bpod_address = ('10.128.54.244',1001) # optional - IP address of bpod computer t
 - Select the configuration you need from the drop-down menu.
 - Click start on all cameras.
 - Start the behavior.
+
+## Data structure
+### Camera parameters
+A json file that contains the following fields. Saved for each recording next to the generated movies.
+```
+{
+    "EXPOSURE_TIME": 3000,
+    "WAIT_TIME": 0.001,
+    "GAIN_VALUE": 10,
+    "GAMMA_VALUE": 0.3,
+    "IMAGE_HEIGHT": 500,
+    "IMAGE_WIDTH": 900,
+    "HEIGHT_OFFSET": 336,
+    "WIDTH_OFFSET": 200,
+    "CAM_TIMEOUT": 50,
+    "MAX_FRAME_NUM": 10000,
+    "RECORDING_MODE": "continuous",
+    "CAMERA_IDX": 0,
+    "DISPLAY_DOWNSAMPLE": 1,
+    "CAMERA_NAME": "bottom",
+    "SAVE_MOVIE": true,
+    "SUBJECT_NAME": "test_subject",
+    "COMPRESSION_LEVEL": 23,
+    "COMPRESSION_THREADS": 4
+}
+```
+### Directory structure
+```
+.
+├── bottom                                                (Camera ID defined in "CAMERA_NAME")
+│   └── test_subject                                      (Name of the mouse defined in "SUBJECT_NAME")
+│       └── 2022-03-08_15-46-06                           (Date and time when the Start button was pressed)
+│           ├── camera_parameters.json                    (Camera parameters used for acquisition)
+│           ├── trial_00000__2022-03-08_15-46-06.json     (json file containing metadata, contents below)
+│           ├── trial_00000__2022-03-08_15-46-06.mp4      (compressed video file)
+│           ├── trial_00001__2022-03-08_15-46-17.json      
+│           ├── trial_00001__2022-03-08_15-46-17.mp4
+│           ├── trial_00002__2022-03-08_15-46-24.json     (each trial has its own video and metadata file)
+│           ├── trial_00002__2022-03-08_15-46-24.mp4
+│           ├── trial_00003__2022-03-08_15-46-30.json
+│           └── trial_00003__2022-03-08_15-46-30.mp4
+
+```
+
+### Metadata contents
+```
+{
+    "pc_movie_start_time": "2022-03-08 15:46:12.494111",  (PC time at the time of the first frame. - this has a jitter depending on the load on the PC)
+    "camera_movie_start_time": 442380.775340136,          (Camera timestamp at the time of the first frame. - seconds from camera turned on)
+    "frame_times": [                                      (Timestamp of each frame relative to the first frame. - seconds)
+        0.0,
+        0.0023845359683036804,
+        0.0047846719971857965,
+        0.007184135960415006,                             (The number of frames in the movie and timestamps in this list should be equal.)
+        0.009587887965608388,
+        0.011988159967586398,
+        0.014388047973625362,
+        ...
+}
+```

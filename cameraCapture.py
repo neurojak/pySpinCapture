@@ -1,5 +1,5 @@
 import PySpin, time, os, threading, queue
-from datetime import datetime
+from datetime import datetime, timedelta
 import tkinter as tk
 from PIL import Image, ImageTk
 from PyQt5.QtGui import QImage,QPixmap
@@ -7,7 +7,7 @@ import numpy as np
 import skvideo
 import skvideo.io
 import socket
-
+import json
 
 
 #%
@@ -199,6 +199,8 @@ def MainLoop(cam,parameters_dict, commQueue, output_handles= None, directoryName
     None.
 
     """
+    with open(os.path.join(directoryName,'camera_parameters.json'), 'w') as outfile:
+        json.dump(parameters_dict , outfile, indent=4)
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # initialize UDP connection
     initCam(cam,parameters_dict)
     end_acquisition = False 
@@ -266,6 +268,7 @@ def MainLoop(cam,parameters_dict, commQueue, output_handles= None, directoryName
         framerate = 0
         t_now = 0
         tStart = t_now
+        frame_times = []
         for frame_i in range(parameters_dict['MAX_FRAME_NUM']): # main acquisition loop - iterate over frames
             while camQueue.empty() and commQueue.empty() and commQueue_.empty(): #wait until ready in a loop
                 time.sleep(parameters_dict['WAIT_TIME'])
@@ -293,6 +296,7 @@ def MainLoop(cam,parameters_dict, commQueue, output_handles= None, directoryName
             
             if parameters_dict['SAVE_MOVIE']:
                 imageWriteQueue.put(dequeuedAcq) #put next combined image in saving queue
+                frame_times.append(frameTime-tStart)
             if (frame_i+1)%100 == 0: # calculate framerate every 100 frames
                 framerate = round((frame_i-framerate_i_last)/(t_now-framerate_t_last),2)
                 framerate_i_last = frame_i
@@ -308,7 +312,7 @@ def MainLoop(cam,parameters_dict, commQueue, output_handles= None, directoryName
                 else:
                     downsampled_image = dequeuedAcq[::parameters_dict['DISPLAY_DOWNSAMPLE'],::parameters_dict['DISPLAY_DOWNSAMPLE']]
                     dequeuedAcq_qt = np.require(downsampled_image, np.uint8, 'C')
-                    im = QImage(dequeuedAcq_qt,downsampled_image.shape[1],downsampled_image.shape[0],QImage.Format_Grayscale8)
+                    im = QImage(dequeuedAcq_qt,dequeuedAcq_qt.shape[1],dequeuedAcq_qt.shape[0],QImage.Format_Grayscale8)
                     px = QPixmap(im)
                     output_handles['display'].setPixmap(px)
                     output_handles['status_label'].setText("frame #: {} @ {} HZ - queue: {}".format(str(frame_i+1).zfill(6),str(framerate).zfill(5),imageWriteQueue.qsize()))
@@ -328,12 +332,18 @@ def MainLoop(cam,parameters_dict, commQueue, output_handles= None, directoryName
             imageWriteQueue.join() #wait until compression and saving queue is done writing to disk
             writer.close() #close to FFMPEG writer
             print('File written')
+            frametime_json_file = movieName[:movieName.find('.')]+'.json'   
+            frame_times_dict = {'movie_start_time':tStart,
+                                'frame_times':frame_times}
+            with open(frametime_json_file, 'w') as outfile:
+                json.dump(frame_times_dict , outfile, indent=4)
     if output_handles ==None:
         window.destroy() 
     else:
         output_handles['start_button'].setText('Start')
         #%
     # delete all pointers/variable/etc:
+    
     
     
     print('Done!')

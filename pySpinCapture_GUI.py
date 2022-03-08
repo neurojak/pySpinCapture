@@ -1,6 +1,6 @@
 
 import sys, os, json
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from PyQt5.QtWidgets import QApplication, QWidget, QPushButton,  QLineEdit, QCheckBox, QHBoxLayout, QGroupBox, QDialog, QVBoxLayout, QGridLayout, QComboBox, QSizePolicy, qApp, QLabel,QPlainTextEdit,QMainWindow
 
@@ -62,8 +62,8 @@ class CameraDisplay(QDialog): # standalone window for each camera
         super(CameraDisplay, self).__init__(parent)
         self.camera_idx = camera_idx
         self.setWindowTitle('Camera {} - {}'.format(camera_idx,self.parent().camera_parameters_list[self.camera_idx]['CAMERA_NAME']))
-        self.setGeometry(50, 
-                         50,
+        self.setGeometry(1, 
+                         500*camera_idx,
                          100,
                          100)  
         
@@ -113,7 +113,7 @@ class CameraDisplay(QDialog): # standalone window for each camera
                 camera_parameters['SAVE_MOVIE'] = False
                 camera_parameters['RECORDING_MODE'] = 'continuous'
                 
-                
+
             self.camThread = threading.Thread(target=cameraCapture.MainLoop, args=(self.parent().cam_list[self.camera_idx] , 
                                                                                    camera_parameters,
                                                                                    self.parent().commQueue_list[self.camera_idx] ,
@@ -134,10 +134,10 @@ class MainWindow(QDialog):
         self.dirs = dict()
         self.handles = dict()
         self.title = 'pySpinCapture GUI'
-        self.left = 20 # 10
-        self.top = 30 # 10
-        self.width = 800    # 1024
-        self.height = 600  # 768
+        self.left = 900 # 10
+        self.top = 1 # 10
+        self.width = 500    # 1024
+        self.height = 800  # 768
         self.config_folder =  config_folder
         self.save_folder = save_folder
         

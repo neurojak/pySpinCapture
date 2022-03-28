@@ -112,7 +112,7 @@ class CameraDisplay(QDialog): # standalone window for each camera
             if self.preview_checkbox.isChecked():
                 camera_parameters['SAVE_MOVIE'] = False
                 camera_parameters['RECORDING_MODE'] = 'continuous'
-                
+                camera_parameters['MAX_FRAME_NUM'] = 5000
 
             self.camThread = threading.Thread(target=cameraCapture.MainLoop, args=(self.parent().cam_list[self.camera_idx] , 
                                                                                    camera_parameters,

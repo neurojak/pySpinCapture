@@ -107,13 +107,15 @@ class CameraDisplay(QDialog): # standalone window for each camera
                                     self.parent().camera_parameters_list[self.camera_idx]['CAMERA_NAME'],
                                     self.parent().camera_parameters_list[self.camera_idx]['SUBJECT_NAME'],
                                     datetime.now().strftime("%Y-%m-%d_%H-%M-%S"))
-            Path(dir_name).mkdir( parents=True, exist_ok=True )
+            
             camera_parameters = self.parent().camera_parameters_list[self.camera_idx].copy()
             if self.preview_checkbox.isChecked():
                 camera_parameters['SAVE_MOVIE'] = False
                 camera_parameters['RECORDING_MODE'] = 'continuous'
                 camera_parameters['MAX_FRAME_NUM'] = 5000
-
+            
+            if camera_parameters['SAVE_MOVIE']:
+                Path(dir_name).mkdir( parents=True, exist_ok=True )
             self.camThread = threading.Thread(target=cameraCapture.MainLoop, args=(self.parent().cam_list[self.camera_idx] , 
                                                                                    camera_parameters,
                                                                                    self.parent().commQueue_list[self.camera_idx] ,

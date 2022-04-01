@@ -169,7 +169,8 @@ def camCapture(camQueue,frameTimeQueue,commQueue_, cam, k,max_frames = 100000, c
             except: #PySpin will throw an exception upon timeout, so end gracefully
                 print('WARNING: timeout waiting for trigger! Aborting...press Ctrl-C to stop')
                 print(str(k) + ' frames captured')
-                commQueue_.put('STOP')  # stopping MainLoop
+                camQueue.put([])   #puts an empty list in the queue to end acquisition
+                #commQueue_.put('STOP')  # stopping MainLoop
                 break
                     
         npImage = np.array(image.GetData(), dtype="uint8").reshape( (image.GetHeight(), image.GetWidth()) ); #convert PySpin ImagePtr into numpy array; use uint8 for Mono8 images, uint16 for Mono16
@@ -199,8 +200,9 @@ def MainLoop(cam,parameters_dict, commQueue, output_handles= None, directoryName
     None.
 
     """
-    with open(os.path.join(directoryName,'camera_parameters.json'), 'w') as outfile:
-        json.dump(parameters_dict , outfile, indent=4)
+    if parameters_dict['SAVE_MOVIE']:
+        with open(os.path.join(directoryName,'camera_parameters.json'), 'w') as outfile:
+            json.dump(parameters_dict , outfile, indent=4)
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) # initialize UDP connection
     initCam(cam,parameters_dict)
     end_acquisition = False 
@@ -224,7 +226,7 @@ def MainLoop(cam,parameters_dict, commQueue, output_handles= None, directoryName
         if output_handles ==None:
             #setup tkinter GUI (non-blocking, i.e. without mainloop) to output images to screen quickly
             window = tk.Tk()
-            window.title("{} camera - {} acquisition".format(parameters_dict['CAMERA_NAME'],parameters_dict['RECORDING_MODE']))
+            window.title("{} camera - {} acquisif parameters_dict['SAVE_MOVIE']:ition".format(parameters_dict['CAMERA_NAME'],parameters_dict['RECORDING_MODE']))
             geomStrWidth = str(parameters_dict['IMAGE_WIDTH'] + 25)
             geomStrHeight = str(parameters_dict['IMAGE_HEIGHT']+ 35)
             window.geometry(geomStrWidth + 'x' + geomStrHeight) # 2x width+25 x height+35; large enough for frames from 2 cameras + text
@@ -277,14 +279,20 @@ def MainLoop(cam,parameters_dict, commQueue, output_handles= None, directoryName
                 command = commQueue.get()
                 if command == 'STOP':
                     end_acquisition = True
-            if not commQueue_.empty(): # commands from camera thread
-                command = commQueue_.get()
-                print('STOPPED')
+# =============================================================================
+#             if not commQueue_.empty(): # commands from camera thread
+#                 command = commQueue_.get()
+#                 print('STOPPED')
+# =============================================================================
             if frame_i == parameters_dict['MAX_FRAME_NUM'] or command == 'STOP':
                 print('Complete ' + str(frame_i+1) + ' frames captured')
                 break
             
             dequeuedAcq = camQueue.get() # get images formated as numpy from separate process queues as soon as they are both ready
+            if len(dequeuedAcq) == 0:
+                print('Complete ' + str(frame_i+1) + ' frames captured')
+                break
+                
             frameTime = frameTimeQueue.get() 
             
             t_now = frameTime

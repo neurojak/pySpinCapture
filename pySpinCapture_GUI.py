@@ -4,7 +4,8 @@ from datetime import datetime, timedelta
 
 from PyQt5.QtWidgets import QApplication, QWidget, QPushButton,  QLineEdit, QCheckBox, QHBoxLayout, QGroupBox, QDialog, QVBoxLayout, QGridLayout, QComboBox, QSizePolicy, qApp, QLabel,QPlainTextEdit,QMainWindow
 
-from PyQt5.QtCore import  Qt
+from PyQt5.QtCore import  Qt, QObject, pyqtSignal
+from PyQt5.QtGui import QPixmap
 import logging 
 import numpy as np
 import cameraCapture
@@ -55,7 +56,9 @@ class Logger(QDialog):# simple logger
         self.show()
         
         
-        
+class SignalCommunicate(QObject):
+    # https://stackoverflow.com/a/45620056
+    data_to_display = pyqtSignal(QPixmap, str, int)    # image, string, camera ID
         
 class CameraDisplay(QDialog): # standalone window for each camera
     def __init__(self, parent=None,camera_idx = None):
@@ -88,11 +91,18 @@ class CameraDisplay(QDialog): # standalone window for each camera
         self.setLayout(self.grid)
 
         #self.setGeometry(50,50,320,200)
+        sc = SignalCommunicate()
+        sc.data_to_display.connect(self.display_frame)
         self.display_handles = {'display':self.display,
                                 'status_label':self.status_label,
                                 'start_button':self.startbutton,
                                 'filename_label':self.filename_edit,
-                                'bpod_address':bpod_address}
+                                'bpod_address':bpod_address,
+                                'signal_communicate':sc}
+    def display_frame(self, px,text,camera_id):
+        self.display.setPixmap(px)
+        self.status_label.setText(text)
+        #print(text)
         
     def start_stop_camera(self): 
         """

@@ -324,8 +324,12 @@ def MainLoop(cam,parameters_dict, commQueue, output_handles= None, directoryName
                     dequeuedAcq_qt = np.require(downsampled_image, np.uint8, 'C')
                     im = QImage(dequeuedAcq_qt,dequeuedAcq_qt.shape[1],dequeuedAcq_qt.shape[0],QImage.Format_Grayscale8)
                     px = QPixmap(im)
-                    output_handles['display'].setPixmap(px)
-                    output_handles['status_label'].setText("frame #: {} @ {} HZ - queue: {}".format(str(frame_i+1).zfill(6),str(framerate).zfill(5),imageWriteQueue.qsize()))
+                    text = "frame #: {} @ {} HZ - queue: {}".format(str(frame_i+1).zfill(6),str(framerate).zfill(5),imageWriteQueue.qsize())
+# =============================================================================
+#                     output_handles['display'].setPixmap(px)
+#                     output_handles['status_label'].setText(text)
+# =============================================================================
+                    output_handles['signal_communicate'].data_to_display.emit(px,text, parameters_dict['CAMERA_IDX'])
                 tLastFrame = frameTime
                 
                           

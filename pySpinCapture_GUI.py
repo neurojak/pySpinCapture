@@ -59,6 +59,8 @@ class Logger(QDialog):# simple logger
 class SignalCommunicate(QObject):
     # https://stackoverflow.com/a/45620056
     data_to_display = pyqtSignal(QPixmap, str, int)    # image, string, camera ID
+    log_message = pyqtSignal( str)
+    
         
 class CameraDisplay(QDialog): # standalone window for each camera
     def __init__(self, parent=None,camera_idx = None):
@@ -93,6 +95,7 @@ class CameraDisplay(QDialog): # standalone window for each camera
         #self.setGeometry(50,50,320,200)
         sc = SignalCommunicate()
         sc.data_to_display.connect(self.display_frame)
+        sc.log_message.connect(self.display_log)
         self.display_handles = {'display':self.display,
                                 'status_label':self.status_label,
                                 'start_button':self.startbutton,
@@ -102,7 +105,8 @@ class CameraDisplay(QDialog): # standalone window for each camera
     def display_frame(self, px,text,camera_id):
         self.display.setPixmap(px)
         self.status_label.setText(text)
-        #print(text)
+    def display_log(self,logtext):
+        logging.info(logtext) 
         
     def start_stop_camera(self): 
         """
@@ -233,7 +237,9 @@ class MainWindow(QDialog):
         if not new_subject == None:
             self.handles['subject_select'].setCurrentText(new_subject)
         self.handles['subject_select'].currentIndexChanged.connect(lambda: self.load_camera_parameters())
-    
+        
+        
+        
     def load_camera_parameters(self):
         """
         This function loads camera parameters in the gui, also initializes
@@ -293,6 +299,7 @@ class MainWindow(QDialog):
                 self.horizontalGroupbox_camera_variables[i].setTitle("Camera: {} - {}".format(camera_parameters['CAMERA_IDX'],camera_parameters['CAMERA_NAME']))
                 for idx,key in enumerate(camera_parameters.keys()):
                     self.handles['camera_variables'][i][key].setText(str(camera_parameters[key]))
+        logging.info('Subject parameters loaded for {}'.format(subject_now)) 
 
     def camera_save_parameters(self,new_subject_name = None):
         """

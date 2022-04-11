@@ -19,8 +19,8 @@ default_parameters  = {'EXPOSURE_TIME': 5000, #in microseconds
                      'IMAGE_WIDTH' : 1420, #720 pixels default; this should be divisible by 16 for H264 compressed encoding
                      'HEIGHT_OFFSET' : 0, #round((540-IMAGE_HEIGHT)/2) # Y, to keep in middle of sensor; must be divisible by 4
                      'WIDTH_OFFSET' : 0, # round((720-IMAGE_WIDTH)/2) # X, to keep in middle of sensor; must be divisible by 4
-                     'CAM_TIMEOUT' : 10000, #in ms; time to wait for another image before aborting
-                     'MAX_FRAME_NUM':10000,
+                     'CAM_TIMEOUT' : 200, #in ms; time to wait for another image before aborting
+                     'MAX_FRAME_NUM':100000,
                      'RECORDING_MODE':'continuous', #continuous / triggered
                      'CAMERA_IDX':0,
                      'DISPLAY_DOWNSAMPLE':1,
@@ -167,8 +167,8 @@ def camCapture(camQueue,frameTimeQueue,commQueue_, cam, k,max_frames = 100000, c
             try:
                 image = cam.GetNextImage(cam_timeout) #get pointer to next image in camera buffer; blocks until image arrives via USB, within CAM_TIMEOUT
             except: #PySpin will throw an exception upon timeout, so end gracefully
-                print('WARNING: timeout waiting for trigger! Aborting...press Ctrl-C to stop')
-                print(str(k) + ' frames captured')
+                print('Timeout waiting for trigger - end of trial.')
+                print(str(k-1) + ' frames captured on image queue')
                 camQueue.put([])   #puts an empty list in the queue to end acquisition
                 #commQueue_.put('STOP')  # stopping MainLoop
                 break
@@ -272,6 +272,9 @@ def MainLoop(cam,parameters_dict, commQueue, output_handles= None, directoryName
         tStart = t_now
         tStart_pc = t_now
         frame_times = []
+        bpod_message_sent = False
+        logtext = 'Camera {} waiting for frame triggers'.format( parameters_dict['CAMERA_IDX'])
+        output_handles['signal_communicate'].log_message.emit(logtext)
         for frame_i in range(parameters_dict['MAX_FRAME_NUM']): # main acquisition loop - iterate over frames
             while camQueue.empty() and commQueue.empty() and commQueue_.empty(): #wait until ready in a loop
                 time.sleep(parameters_dict['WAIT_TIME'])
@@ -300,9 +303,12 @@ def MainLoop(cam,parameters_dict, commQueue, output_handles= None, directoryName
                 tStart = t_now
                 tStart_pc = datetime.now()
                 tLastFrame = tStart
-                print('Capture begins')
-            elif frame_i == 1 and parameters_dict['SAVE_MOVIE'] and not output_handles ==  None:
+                logtext = 'Camera {} capture begins'.format( parameters_dict['CAMERA_IDX'])
+                output_handles['signal_communicate'].log_message.emit(logtext)
+                #print('Capture begins')
+            elif not bpod_message_sent and frame_i > 1+100*parameters_dict['CAMERA_IDX'] and parameters_dict['SAVE_MOVIE'] and not output_handles ==  None:
                 sock.sendto(bytes(movieName, "utf-8"), output_handles['bpod_address']) # send bpod the filename before finalizing on disk
+                bpod_message_sent = True
             
             if parameters_dict['SAVE_MOVIE']:
                 imageWriteQueue.put(dequeuedAcq) #put next combined image in saving queue
@@ -339,13 +345,17 @@ def MainLoop(cam,parameters_dict, commQueue, output_handles= None, directoryName
         if output_handles ==None:
             textlbl.configure(text='Capture complete, still writing to disk...') 
             window.update()
-        print('Capture ended')
+        #print('Capture ended')
+        logtext = 'Camera {} capture ended. {} frames captured.'.format( parameters_dict['CAMERA_IDX'],frame_i)
+        output_handles['signal_communicate'].log_message.emit(logtext)
         #   print('calculated frame rate: {:.2f}FPS'.format(numImages/(t2 - t1)))
         if parameters_dict['SAVE_MOVIE'] and frame_i>0: # save files only if there are frames to write
             
             imageWriteQueue.join() #wait until compression and saving queue is done writing to disk
             writer.close() #close to FFMPEG writer
-            print('File written')
+            #print('File written')
+            logtext = 'Camera {} file written to disk'.format( parameters_dict['CAMERA_IDX'])
+            output_handles['signal_communicate'].log_message.emit(logtext)
             frametime_json_file = movieName[:movieName.find('.')]+'.json'   
             frame_times_dict = {'pc_movie_start_time':str(tStart_pc),
                                 'camera_movie_start_time':tStart,
@@ -359,6 +369,3 @@ def MainLoop(cam,parameters_dict, commQueue, output_handles= None, directoryName
         #%
     # delete all pointers/variable/etc:
     
-    
-    
-    print('Done!')
